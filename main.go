@@ -45,20 +45,26 @@ func Get(key string, c redis.Conn) string {
 func (client *Client) hoge(cc *gin.Context) {
 	defer client.Redis.Close()
 
-	res_set := Set("sample-key", "sample-value", client.Redis)
-	fmt.Println(res_set) // OK
-
 	res_get := Get("sample-key", client.Redis)
 	fmt.Println(res_get) // sample-value
 
 	cc.JSON(200, res_get)
 
 }
+
+func (client *Client) setup() {
+	res_set := Set("sample-key", "sample-value", client.Redis)
+	fmt.Println(res_set) // OK
+
+}
+
 func main() {
 
 	r := gin.Default()
 
 	client := init_client()
+
+	// client.setup()
 
 	r.GET("/", client.hoge)
 	r.Run() // デフォルトが8080ポートなので今回は変更しません
