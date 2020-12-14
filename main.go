@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
@@ -16,7 +16,7 @@ type Client struct {
 }
 
 func init_client() Client {
-	client, _ := gorm.Open("mysql", "root:root@tcp([mysql]:3306)/Weather?charset=utf8mb4&parseTime=true")
+	client, _ := gorm.Open("mysql", "root:root@tcp([mysql]:3306)/test?charset=utf8mb4&parseTime=true")
 
 	const Addr = "redis:6379"
 
@@ -42,20 +42,16 @@ func Get(key string, c redis.Conn) string {
 	return res
 }
 
-func (client *Client) hoge(cc *gin.Context) {
+func (client *Client) getRedis(cc *gin.Context) {
 	defer client.Redis.Close()
 
 	res_get := Get("sample-key", client.Redis)
-	fmt.Println(res_get) // sample-value
-
 	cc.JSON(200, res_get)
-
 }
-
-func (client *Client) setup() {
-	res_set := Set("sample-key", "sample-value", client.Redis)
-	fmt.Println(res_set) // OK
-
+func (client *Client) getMysql(cc *gin.Context) {
+	var data TestData
+	client.Mysql.Where("id = 1").Find(&data)
+	cc.JSON(200, data)
 }
 
 func main() {
@@ -63,9 +59,26 @@ func main() {
 	r := gin.Default()
 
 	client := init_client()
+	time.Sleep(20)
+	client.setup()
 
-	// client.setup()
+	r.GET("/redis", client.getRedis)
 
-	r.GET("/", client.hoge)
-	r.Run() // デフォルトが8080ポートなので今回は変更しません
+	r.GET("/mysql", client.getMysql)
+	r.Run()
+}
+func (client *Client) setup() {
+
+	client.Mysql.AutoMigrate(&TestData{})
+
+	testdata := TestData{Data: "hugahuga", Token: "hunngaaaaaaaa"}
+	Set("sample-key", "sample-value", client.Redis)
+	client.Mysql.Create(&testdata)
+
+}
+
+type TestData struct {
+	gorm.Model
+	Data  string `json:"data"`
+	Token string `json:"token"`
 }
